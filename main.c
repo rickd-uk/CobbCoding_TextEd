@@ -10,9 +10,7 @@ int main(void) {
 
   int ch = getch();
 
-  if (ch == KEY_F(1)) {
-    printw("F1 key pressed!\n");
-  }
+  printw("%d\n", ch);
 
   refresh();
   getch();
