@@ -11,9 +11,13 @@ int main(void) {
   int ch = getch();
 
   printw("%d\n", ch);
+  while (ch != 'q') {
+    ch = getch();
+    printw("%d\n", ch);
+  }
 
   refresh();
-  getch();
+  /* getch(); */
   endwin();
 
   return 0;
