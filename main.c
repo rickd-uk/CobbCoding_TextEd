@@ -12,6 +12,7 @@ int main(void) {
   getmaxyx(stdscr, row, col);
 
   mvprintw(row - 1, 0, "NORMAL");
+  move(0, 0);
   int ch = getch();
 
   while (ch != 'q') {
