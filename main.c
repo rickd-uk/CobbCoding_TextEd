@@ -8,12 +8,15 @@ int main(void) {
   keypad(stdscr, TRUE);
   noecho();
 
+  int row, col;
+  getmaxyx(stdscr, row, col);
+
+  mvprintw(row - 1, 0, "NORMAL");
   int ch = getch();
 
-  printw("%d\n", ch);
   while (ch != 'q') {
+    printw("%c", ch);
     ch = getch();
-    printw("%d\n", ch);
   }
 
   refresh();
