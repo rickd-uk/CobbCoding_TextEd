@@ -46,6 +46,7 @@ int main(void) {
 
   int x, y = 0;
   while (ch != ctrl('q') && QUIT != 1) {
+    refresh();
     mvprintw(row - 1, 0, "%s", stringify_mode());
     move(y, x);
     ch = getch();
@@ -54,11 +55,19 @@ int main(void) {
       case NORMAL:
         if (ch == 'i') {
           mode = INSERT;
+          keypad(stdscr, FALSE);
+        } else if (ch == ctrl('s')) {
+          /* printf("Save file"); */
+          /* printf("buf_s: %zu", buf_s); */
+          FILE *file = fopen("out", "w");
+          fwrite(buf, buf_s, 1, file);
+          fclose(file);
+          QUIT = 1;
         }
         break;
-      case INSERT:
+      case INSERT: {
         keypad(stdscr, FALSE);
-        if (ch == BACKSPACE) {
+        if (ch == BACKSPACE || ch == KEY_BACKSPACE) {
           getyx(stdscr, y, x);
           move(y, x - 1);
           delch();
@@ -71,15 +80,14 @@ int main(void) {
           addch(ch);
         }
         break;
+      }
     }
     getyx(stdscr, y, x);
   }
   refresh();
-
   endwin();
 
   return 0;
 }
 
-// url:
 // https://www.youtube.com/watch?v=Y4KkRZ8Ib9o&list=PLRnI_2_ZWhtDPfMXetMFtU3i1k37Ka8sx
