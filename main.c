@@ -56,6 +56,14 @@ int main(void) {
         if (ch == 'i') {
           mode = INSERT;
           keypad(stdscr, FALSE);
+        } else if (ch == 'h') {
+          move(y, x - 1);
+        } else if (ch == 'l') {
+          move(y, x + 1);
+        } else if (ch == 'j') {
+          move(y + 1, x);
+        } else if (ch == 'k') {
+          move(y - 1, x);
         } else if (ch == ctrl('s')) {
           /* printf("Save file"); */
           /* printf("buf_s: %zu", buf_s); */
