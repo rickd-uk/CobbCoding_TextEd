@@ -68,6 +68,8 @@ int main(void) {
   int x, y = 0;
 
   while (ch != ctrl('q') && QUIT != 1) {
+    clear();
+    getmaxyx(stdscr, row, col);
     refresh();
     mvprintw(row - 1, 0, "%s", stringify_mode());
     mvprintw(row - 1, col / 2, "%.3zu:%.3zu", buffer.row_index, buffer.cur_pos);
@@ -87,18 +89,14 @@ int main(void) {
           mode = INSERT;
           keypad(stdscr, FALSE);
         } else if (ch == 'h') {
-          move(y, x - 1);
           if (buffer.cur_pos != 0) buffer.cur_pos--;
-
         } else if (ch == 'l') {
-          move(y, x + 1);
-          buffer.cur_pos += 1;
+          /* if (buffer.cur_pos < buffer.rows[buffer.row_index].size) */
+          buffer.cur_pos++;
         } else if (ch == 'j') {
-          move(y + 1, x);
-          buffer.row_index += 1;
+          if (buffer.row_index < buffer.row_size) buffer.row_index++;
         } else if (ch == 'k') {
-          move(y - 1, x);
-          buffer.row_index -= 1;
+          if (buffer.row_index != 0) buffer.row_index -= 1;
         } else if (ch == ctrl('s')) {
           FILE *file = fopen("out", "w");
           for (size_t i = 0; i <= buffer.row_size; i++) {
@@ -107,6 +105,12 @@ int main(void) {
           fclose(file);
           QUIT = 1;
         }
+        if (buffer.cur_pos > buffer.rows[buffer.row_index].size) {
+          buffer.cur_pos = buffer.rows[buffer.row_index].size;
+        }
+        x = buffer.cur_pos;
+        y = buffer.row_index;
+        move(y, x);
         break;
       case INSERT: {
         keypad(stdscr, FALSE);
@@ -129,7 +133,7 @@ int main(void) {
           keypad(stdscr, TRUE);
         } else if (ch == ENTER) {
           buffer.rows[buffer.row_index]
-              .contents[buffer.rows[buffer.row_index].size++] = '\n';
+              .contents[buffer.rows[buffer.row_index].size] = '\n';
           buffer.row_index++;
           buffer.row_size++;
           buffer.cur_pos = 0;
@@ -138,8 +142,8 @@ int main(void) {
           Row *cur = &buffer.rows[buffer.row_index];
           cur->contents[buffer.cur_pos++] = ch;
           cur->size = buffer.cur_pos;
-          size_t col_index = strlen(cur->contents);
-          move(y, col_index);
+          /* size_t col_index = strlen(cur->contents); */
+          move(y, buffer.cur_pos);
         }
         break;
       }
