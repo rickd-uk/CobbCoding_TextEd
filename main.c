@@ -1,4 +1,5 @@
 #include <curses.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #define ctrl(x) ((x) & 0x1f)
@@ -7,6 +8,7 @@
 
 typedef enum { NORMAL, INSERT } Mode;
 
+int QUIT = 0;
 Mode mode = NORMAL;
 
 const char *stringify_mode() {
@@ -43,7 +45,7 @@ int main(void) {
   int ch = 0;
 
   int x, y = 0;
-  while (ch != ctrl('q')) {
+  while (ch != ctrl('q') && QUIT != 1) {
     mvprintw(row - 1, 0, "%s", stringify_mode());
     move(y, x);
     ch = getch();
@@ -60,10 +62,12 @@ int main(void) {
           getyx(stdscr, y, x);
           move(y, x - 1);
           delch();
+          buf[buf_s--] = ' ';  // del char from buffer
         } else if (ch == ESCAPE) {
           mode = NORMAL;
           keypad(stdscr, TRUE);
         } else {
+          buf[buf_s++] = ch;  // add char to buffer
           addch(ch);
         }
         break;
