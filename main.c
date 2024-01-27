@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <curses.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,9 +8,10 @@
 #define BACKSPACE 127
 #define ESCAPE 27
 #define ENTER 10
-#define ROW_SIZE 1024
 
 typedef enum { NORMAL, INSERT } Mode;
+
+#define MAX_ROWS 1024
 
 typedef struct {
   size_t index;
@@ -19,7 +21,7 @@ typedef struct {
 
 typedef struct {
   char *buf;
-  Row rows[ROW_SIZE];
+  Row rows[MAX_ROWS];
   size_t row_index;
   size_t cur_pos;
   size_t row_size;
@@ -42,7 +44,37 @@ const char *stringify_mode() {
   }
   return "NORMAL";
 }
+#define MAX_STRING_SIZE 1025
 
+void shift_rows(Buffer *buf, size_t index) {
+  assert(buf->row_size + 1 < MAX_ROWS);
+  char *new = calloc(MAX_STRING_SIZE, sizeof(char));
+  for (size_t i = buf->row_size + 1; i > index; i--) {
+    buf->rows[i] = buf->rows[i - 1];
+  }
+  buf->rows[index] = (Row){0};
+  buf->rows[index].contents = new;
+  buf->rows[index].index = index;
+  buf->row_size++;
+}
+
+void shift_str(Buffer *buf, size_t dest_index, size_t *dest_size,
+               size_t *str_size, size_t index) {
+  assert(index < MAX_STRING_SIZE);
+  assert(dest_index > 0);
+  *dest_size = (*str_size - index);
+  size_t final_size = *dest_size;
+  char *tmp = calloc(final_size, sizeof(char));
+  for (size_t i = index; i < *str_size; i++) {
+    tmp[i % index] = buf->rows[dest_index - 1].contents[i];
+    buf->rows[dest_index - 1].contents[i] = '\0';
+  }
+  shift_rows(buf, dest_index);
+  strncpy(buf->rows[dest_index].contents, tmp, sizeof(char) * final_size);
+  buf->rows[dest_index].size = final_size;
+  *str_size = index;
+  free(tmp);
+}
 int main(void) {
   // initializes the library
   initscr();
@@ -52,12 +84,11 @@ int main(void) {
 
   // initialize buffer
   Buffer buffer = {0};
-  for (size_t i = 0; i < ROW_SIZE; i++) {
-    buffer.rows[i].contents = calloc(ROW_SIZE, sizeof(char));
+  for (size_t i = 0; i < 1024; i++) {
+    buffer.rows[i].contents = calloc(MAX_STRING_SIZE, sizeof(char));
   }
 
   int row, col;
-  (void)col;  // intentionally unused (to supress compiler warnings)
   getmaxyx(stdscr, row, col);
 
   // set cursor pos. at 0,0
@@ -65,7 +96,7 @@ int main(void) {
   move(0, 0);
 
   int ch = 0;
-  int x, y = 0;
+  size_t x, y = 0;
 
   while (ch != ctrl('q') && QUIT != 1) {
     clear();
@@ -83,24 +114,22 @@ int main(void) {
 
     switch (mode) {
       case NORMAL:
-        if (x > buffer.rows[buffer.row_index].size - 1)
-          x = buffer.rows[buffer.row_index].size - 1;
         if (ch == 'i') {
           mode = INSERT;
-          keypad(stdscr, FALSE);
+          /* keypad(stdscr, FALSE); */
         } else if (ch == 'h') {
           if (buffer.cur_pos != 0) buffer.cur_pos--;
         } else if (ch == 'l') {
-          /* if (buffer.cur_pos < buffer.rows[buffer.row_index].size) */
           buffer.cur_pos++;
         } else if (ch == 'j') {
           if (buffer.row_index < buffer.row_size) buffer.row_index++;
         } else if (ch == 'k') {
-          if (buffer.row_index != 0) buffer.row_index -= 1;
+          if (buffer.row_index != 0) buffer.row_index--;
         } else if (ch == ctrl('s')) {
           FILE *file = fopen("out", "w");
           for (size_t i = 0; i <= buffer.row_size; i++) {
             fwrite(buffer.rows[i].contents, buffer.rows[i].size, 1, file);
+            fwrite("\n", sizeof("\n") - 1, 1, file);
           }
           fclose(file);
           QUIT = 1;
@@ -119,8 +148,8 @@ int main(void) {
           if (buffer.cur_pos == 0) {
             if (buffer.row_index != 0) {
               Row *cur = &buffer.rows[--buffer.row_index];
-              move(buffer.row_index, buffer.cur_pos);
               buffer.cur_pos = cur->size;
+              move(buffer.row_index, buffer.cur_pos);
             }
           } else {
             Row *cur = &buffer.rows[buffer.row_index];
@@ -132,17 +161,19 @@ int main(void) {
           mode = NORMAL;
           keypad(stdscr, TRUE);
         } else if (ch == ENTER) {
-          buffer.rows[buffer.row_index]
-              .contents[buffer.rows[buffer.row_index].size] = '\n';
+          Row *cur = &buffer.rows[buffer.row_index];
+          Row *nxt = &buffer.rows[buffer.row_index + 1];
+
+          shift_str(&buffer, buffer.row_index + 1, &nxt->size, &cur->size,
+                    buffer.cur_pos);
+          /* cur->contents[cur->size - 1] = '\n'; */
           buffer.row_index++;
-          buffer.row_size++;
           buffer.cur_pos = 0;
           move(buffer.row_index, buffer.cur_pos);
         } else {
           Row *cur = &buffer.rows[buffer.row_index];
           cur->contents[buffer.cur_pos++] = ch;
           cur->size = buffer.cur_pos;
-          /* size_t col_index = strlen(cur->contents); */
           move(y, buffer.cur_pos);
         }
         break;
@@ -156,4 +187,6 @@ int main(void) {
   return 0;
 }
 
+// //
 // https://www.youtube.com/watch?v=Y4KkRZ8Ib9o&list=PLRnI_2_ZWhtDPfMXetMFtU3i1k37Ka8sx
+
