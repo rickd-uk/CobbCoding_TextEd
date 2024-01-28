@@ -43,7 +43,6 @@ const char *stringify_mode() {
       return "NORMAL";
       break;
   }
-  return "NORMAL";
 }
 
 void shift_rows_left(Buffer *buf, size_t index) {
@@ -124,9 +123,7 @@ int main(void) {
   size_t x, y = 0;
 
   while (ch != ctrl('q') && QUIT != 1) {
-#ifndef NO_CLEAR
     clear();
-#endif
     getmaxyx(stdscr, row, col);
     refresh();
     mvprintw(row - 1, 0, "%s", stringify_mode());
@@ -143,7 +140,7 @@ int main(void) {
       case NORMAL:
         if (ch == 'i') {
           mode = INSERT;
-          /* keypad(stdscr, FALSE); */
+          keypad(stdscr, FALSE);
         } else if (ch == 'h') {
           if (buffer.cur_pos != 0) buffer.cur_pos--;
         } else if (ch == 'l') {
